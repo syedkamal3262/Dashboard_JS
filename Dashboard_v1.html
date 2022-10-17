@@ -1,0 +1,287 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<title>ADS</title>
+	<meta name="description" content="An interactive getting started guide for Brackets." />
+	<style>
+	* {
+		box-sizing: border-box;
+		font-family: Arial, sans-serif;
+	}
+	
+	.row {
+		margin-left: -5px;
+		margin-right: -5px;
+	}
+	
+	.column {
+		float: left;
+		width: auto;
+		padding: 1%;
+	}
+	/* Clearfix (clear floats) */
+	
+	.row::after {
+		content: "";
+		clear: both;
+		display: table;
+	}
+	
+	table {
+		border-collapse: collapse;
+		border-spacing: 0;
+		width: 100%;
+		border: 1px solid #ddd;
+	}
+	
+	th,
+	td {
+		text-align: left;
+		padding: 8px;
+		height: 6px;
+	}
+	
+	tr:nth-child(even) {
+		background-color: #f2f2f2;
+	}
+	
+	#authorization_token {
+		width: 60%;
+	}
+	</style>
+</head>
+
+<body>
+	<h1>Threads Information</h1>
+	<hr />
+	<script>
+	function dynamicSort(property) {
+		var sortOrder = 1;
+		if(property[0] === "-") {
+			sortOrder = -1;
+			property = property.substr(1);
+		}
+		return function(a, b) {
+			/* next line works with strings and numbers, 
+			 * and you may want to customize it to your needs
+			 */
+			var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+			return result * sortOrder;
+		}
+	}
+
+	function myFunction() {
+		if(document.querySelector("#token").value == "") {
+			alert("Please token");
+		} else {
+			var authorization_token = document.querySelector("#token").value;
+			//document.querySelector("#currently_used_token").innerHTML   = "currently used token : "document.querySelector("#authorization_token").value;
+			var date = new Date();
+			var cdate = String(date.getFullYear()) + "-" + String(date.getMonth() + 1).padStart(2, "0") + "-" + String(date.getDate() - 4).padStart(2, "0");
+			var threads = [];
+			
+            fetch("http://" + cdate, {
+				headers: {
+					accept: "application/json, text/plain, */*",
+					"accept-language": "en-US,en;q=0.9",
+					authorization: authorization_token, // If this script does not work you can change this authorization from network panel.
+				},
+			}).then((response) => response.json()).then((responseJSON) => {
+				window.jsondata = responseJSON;
+				console.log(responseJSON);
+				var totalsps = 0;
+				var siteprocessornames = [];
+				var totalthreads = 0;
+				var WestEurope = 0;
+				for(d of jsondata._embedded.siteProcessorExeRecords) {
+					threads.push({
+						siteProcessorName: d.siteProcessorName,
+						threads: d.max,
+						JobName: d.jobName,
+						
+					});
+					totalthreads += d.max;
+					totalsps += 1;
+					if(d.region == "West") {
+						WestEurope += d.max;
+					}
+				}
+				threads = threads.sort(dynamicSort("-th"));
+				console.table(threads);
+				let summary = threads.reduce((acc, x) => {
+					if(acc.find((y) => y.JobName === x.JobName)) return acc.concat([]);
+					const threadz = threads.filter((y) => y.JobName === x.JobName).map((y) => y.threads).reduce((a, b) => a + b, 0);
+					const JobName = threads.filter((y) => y.JobName === x.JobName).map((y) => y.JobName).reduce((a, b) => a + b, 0);
+					return acc.concat([{...x,
+						thread: threadz,
+					}, ]);
+				}, []);
+				summary = summary.sort(dynamicSort("-thread"));
+				console.table(summary);
+				maxThreads = Math.max(...threads.map(o => o.threads))
+				document.querySelector("#datatable").innerHTML = "";
+				document.querySelector("#summarytable").innerHTML = "";
+				document.getElementById("total").innerHTML = "";
+				document.getElementById("westt").innerHTML = "";
+				document.getElementById("Complete").innerHTML = "Complete"
+				document.getElementById("Summary").innerHTML = "Summary"
+				var totalthread = document.getElementById("total");
+				totalthread.innerHTML = totalthreads;
+				var westthread = document.getElementById("west");
+				westthread.innerHTML = WestEurope;
+				var totalsiteProcessors = document.getElementById("Site");
+				totalsiteProcessors.innerHTML = totalsps;
+				var maximumThreads = document.getElementById("max");
+				maximumThreads.innerHTML = maxThreads;
+				var datatable = document.getElementById("datatable");
+				var datathr = document.createElement("tr");
+				var datath1 = document.createElement("th");
+				datath1.innerHTML = "Job";
+				var datath2 = document.createElement("th");
+				datath2.innerHTML = "Site Processor";
+				var datath3 = document.createElement("th");
+				datath3.innerHTML = "Threads";
+				var datath4 = document.createElement("th");
+				datath4.innerHTML = "Region";
+				var datath5 = document.createElement("th");
+				datath5.innerHTML = "Total Requests";
+				var datath6 = document.createElement("th");
+				datath6.innerHTML = "Processed Requests";
+				var datath7 = document.createElement("th");
+				datath7.innerHTML = "Failed Requests";
+				var datath8 = document.createElement("th");
+				datath8.innerHTML = "Started At";
+				var datath9 = document.createElement("th");
+				datath9.innerHTML = "Duration";
+				datathr.appendChild(datath1);
+				datathr.appendChild(datath2);
+				datathr.appendChild(datath3);
+				datathr.appendChild(datath4);
+				datathr.appendChild(datath5);
+				datathr.appendChild(datath6);
+				datathr.appendChild(datath7);
+				datathr.appendChild(datath9);
+				datathr.appendChild(datath8);
+				datatable.appendChild(datathr);
+				for(var i = 0; i < threads.length; i++) {
+					var datatr = document.createElement("tr");
+					var datatd1 = document.createElement("td");
+					datatd1.innerHTML = threads[i].JobName;
+					var datatd2 = document.createElement("td");
+					datatd2.innerHTML = threads[i].siteProcessorName;
+					var datatd3 = document.createElement("td");
+					datatd3.innerHTML = threads[i].threads;
+					var datatd4 = document.createElement("td");
+					datatd4.innerHTML = threads[i].region;
+					var datatd5 = document.createElement("td");
+					datatd5.innerHTML = threads[i].totalrequests;
+					var datatd6 = document.createElement("td");
+					datatd6.innerHTML = threads[i].totalcrawled;
+					var datatd7 = document.createElement("td");
+					datatd7.innerHTML = threads[i].totalfailed;
+					var datatd8 = document.createElement("td");
+					datatd8.innerHTML = threads[i].startedat;
+					var datatd9 = document.createElement("td");
+					datatd9.innerHTML = threads[i].duration;
+					datatr.appendChild(datatd1);
+					datatr.appendChild(datatd2);
+					datatr.appendChild(datatd3);
+					datatr.appendChild(datatd4);
+					datatr.appendChild(datatd5);
+					datatr.appendChild(datatd6);
+					datatr.appendChild(datatd7);
+					datatr.appendChild(datatd9);
+					datatr.appendChild(datatd8);
+					datatable.appendChild(datatr);
+				}
+				var summarytable = document.getElementById("summarytable");
+				var summarythr = document.createElement("tr");
+				var summaryth1 = document.createElement("th");
+				summaryth1.innerHTML = "Job";
+				var summaryth2 = document.createElement("th");
+				summaryth2.innerHTML = "Threads";
+				summarythr.appendChild(summaryth1);
+				summarythr.appendChild(summaryth2);
+				summarytable.appendChild(summarythr);
+				for(var i = 0; i < summary.length; i++) {
+					var summarytr = document.createElement("tr");
+					var summarytd1 = document.createElement("td");
+					summarytd1.innerHTML = summary[i].JobName;
+					var summarytd2 = document.createElement("td");
+					summarytd2.innerHTML = summary[i].thread;
+					summarytr.appendChild(summarytd1);
+					summarytr.appendChild(summarytd2);
+					summarytable.appendChild(summarytr);
+				}
+			});
+		}
+	}
+
+	function selectElementContents(el) {
+		var body = document.body,
+			range,
+			sel;
+		if(document.createRange && window.getSelection) {
+			range = document.createRange();
+			sel = window.getSelection();
+			sel.removeAllRanges();
+			try {
+				range.selectNodeContents(el);
+				sel.addRange(range);
+			} catch(e) {
+				range.selectNode(el);
+				sel.addRange(range);
+			}
+		} else if(body.createTextRange) {
+			range = body.createTextRange();
+			range.moveToElementText(el);
+			range.select();
+		}
+		document.execCommand("Copy");
+	}
+	</script>
+	<table cellspacing="2" cellpadding="2" border="1">
+		<tr>
+			<td align="right"> ID </td>
+			<td>
+				<input type="text" id="token" />
+			</td>
+		</tr>
+	</table>
+	<button onclick="myFunction()" style='padding: 5px; margin: 5px;text-align: center'>Extract Threads</button>
+	<hr />
+	<button onclick='selectElementContents(document.getElementById("datatable"))' style='padding: 2.5px; text-align: center'>Copy Complete Data</button>
+	<button onclick='selectElementContents(document.getElementById("summarytable"))' style='padding: 2.5px; text-align: center'>Copy Summary</button>
+	<hr />
+	<fieldset style='padding: 0px;display: inline-block;'>
+		<legend>
+			<h2 style='padding: 0px; margin: 0px; text-align: center'> 1 </h2></legend>
+		<h1 style='padding: 0px; margin: 0px; text-align: center' id="total"></h1> </fieldset>
+	<fieldset style='padding: 0px;  display: inline-block;'>
+		<legend>
+			<h2 style='padding: 0px;margin: 0px;text-align: center'> 2 </h2></legend>
+		<h1 style='padding: 0px; margin: 0px; text-align: center' id="west"></h1> </fieldset>
+	<fieldset style='padding: 0px;  display: inline-block;'>
+		<legend>
+			<h2 style='padding: 0px;margin: 0px;text-align: center'> 3 </h2></legend>
+		<h1 style='padding: 0px; margin: 0px; text-align: center' id="Site"></h1> </fieldset>
+	<fieldset style='padding: 0px;  display: inline-block;'>
+		<legend>
+			<h2 style='padding: 0px;margin: 0px;text-align: center'> 4 </h2></legend>
+		<h1 style='padding: 0px; margin: 0px; text-align: center' id="max"></h1> </fieldset>
+	<div class="row">
+		<div class="column">
+			<h3 id="Completes"></h3>
+			<table id="datatable" style='font-size:12px'></table>
+		</div>
+		<div class="column">
+			<h3 id="ummary"></h3>
+			<table id="summary" style='font-size:15px'></table>
+		</div>
+	</div>
+</body>
+
+</html>
